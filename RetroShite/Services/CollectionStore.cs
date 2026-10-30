@@ -1,0 +1,73 @@
+using RetroShite.Models;
+using SQLite;
+
+namespace RetroShite.Services;
+
+public sealed class CollectionStore
+{
+    public static readonly string Root = Path.Combine(FileSystem.AppDataDirectory, "Collection");
+    public static readonly string Covers = Path.Combine(Root, "Covers");
+    public static readonly string Database = Path.Combine(Root, "retroshite.db");
+    private readonly SQLiteConnection _db;
+
+    private static readonly string[] DefaultSystems =
+    {
+        "Mega Drive", "Mega-CD", "Master System", "Saturn", "Dreamcast",
+        "NES", "SNES", "Nintendo 64", "GameCube", "Game Boy", "Game Boy Advance",
+        "PlayStation", "PS2", "PS3", "PSP Games", "PSP UMD Video", "DVD", "Blu-ray", "Other"
+    };
+
+    public CollectionStore()
+    {
+        Directory.CreateDirectory(Covers);
+        _db = new SQLiteConnection(Database);
+        _db.CreateTable<CollectionItem>();
+        _db.CreateTable<CollectionSystem>();
+        if (_db.Table<CollectionSystem>().Count() == 0)
+        {
+            foreach (var name in DefaultSystems)
+                _db.Insert(new CollectionSystem { Name = name });
+        }
+    }
+
+    public List<string> Systems()
+    {
+        var configured = _db.Table<CollectionSystem>().ToList().OrderBy(x => x.Id).Select(x => x.Name);
+        var used = _db.Table<CollectionItem>().ToList().Select(x => x.System);
+        return configured.Concat(used).Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    public bool AddSystem(string name)
+    {
+        name = name.Trim();
+        if (name.Length == 0 || name.Equals("All", StringComparison.OrdinalIgnoreCase)
+            || Systems().Any(x => x.Equals(name, StringComparison.OrdinalIgnoreCase))) return false;
+        _db.Insert(new CollectionSystem { Name = name });
+        return true;
+    }
+
+    public List<CollectionItem> All() => _db.Table<CollectionItem>().OrderBy(x => x.Title).ToList();
+    public CollectionItem? Lookup(string barcode) => _db.Table<CollectionItem>().FirstOrDefault(x => x.Barcode == barcode);
+    public void Save(CollectionItem item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.Barcode))
+        {
+            var existing = Lookup(item.Barcode);
+            if (existing is not null && existing.Id != item.Id)
+                throw new InvalidOperationException("This barcode is already in the collection.");
+        }
+        if (item.Id == 0) _db.Insert(item);
+        else _db.Update(item);
+    }
+    public void Delete(CollectionItem item)
+    {
+        _db.Delete(item);
+        if (!string.IsNullOrWhiteSpace(item.CoverFile))
+        {
+            var path = Path.Combine(Covers, item.CoverFile);
+            if (File.Exists(path) && !_db.Table<CollectionItem>().Any(x => x.CoverFile == item.CoverFile)) File.Delete(path);
+        }
+    }
+    public void Close() => _db.Close();
+}

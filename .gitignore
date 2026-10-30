@@ -1,0 +1,28 @@
+# .NET / Visual Studio
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Signing material and install packages
+*.keystore
+*.jks
+*.pfx
+*.p12
+*.apk
+*.aab
+
+# Personal collection data and backups
+*.db
+*.db-shm
+*.db-wal
+*RetroShite_Backup*.zip
+**/Covers/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
