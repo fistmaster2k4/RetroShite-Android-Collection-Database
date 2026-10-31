@@ -23,10 +23,16 @@ public sealed class CollectionStore
         _db = new SQLiteConnection(Database);
         _db.CreateTable<CollectionItem>();
         _db.CreateTable<CollectionSystem>();
-        if (_db.Table<CollectionSystem>().Count() == 0)
+        _db.CreateTable<CollectionSetting>();
+        // Seed only on first migration. An intentionally emptied category list must stay empty.
+        if (_db.Find<CollectionSetting>("systems_initialized") is null)
         {
-            foreach (var name in DefaultSystems)
-                _db.Insert(new CollectionSystem { Name = name });
+            if (_db.Table<CollectionSystem>().Count() == 0)
+            {
+                foreach (var name in DefaultSystems)
+                    _db.Insert(new CollectionSystem { Name = name });
+            }
+            _db.Insert(new CollectionSetting { Key = "systems_initialized", Value = "1" });
         }
     }
 
@@ -45,6 +51,25 @@ public sealed class CollectionStore
             || Systems().Any(x => x.Equals(name, StringComparison.OrdinalIgnoreCase))) return false;
         _db.Insert(new CollectionSystem { Name = name });
         return true;
+    }
+
+    public int ItemCountForSystem(string name) =>
+        _db.Table<CollectionItem>().Count(x => x.System == name);
+
+    public void RemoveSystems(IEnumerable<string> names)
+    {
+        var toRemove = names.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (toRemove.Count == 0) return;
+        var categories = _db.Table<CollectionSystem>().ToList();
+        if (categories.Count - toRemove.Count < 1)
+            throw new InvalidOperationException("Keep at least one system. You can rename your collection by adding a new one first.");
+        if (toRemove.Any(name => ItemCountForSystem(name) != 0))
+            throw new InvalidOperationException("Move or delete the items in a system before removing it.");
+        _db.RunInTransaction(() =>
+        {
+            foreach (var category in categories.Where(x => toRemove.Contains(x.Name, StringComparer.OrdinalIgnoreCase)))
+                _db.Delete(category);
+        });
     }
 
     public List<CollectionItem> All() => _db.Table<CollectionItem>().OrderBy(x => x.Title).ToList();

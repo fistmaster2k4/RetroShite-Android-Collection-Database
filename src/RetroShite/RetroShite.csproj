@@ -9,8 +9,8 @@
     <Nullable>enable</Nullable>
     <ApplicationTitle>RetroShite</ApplicationTitle>
     <ApplicationId>com.blueprint.retroshite</ApplicationId>
-        <ApplicationDisplayVersion>0.1.2</ApplicationDisplayVersion>
-        <ApplicationVersion>3</ApplicationVersion>
+        <ApplicationDisplayVersion>0.1.3</ApplicationDisplayVersion>
+        <ApplicationVersion>4</ApplicationVersion>
     <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
   </PropertyGroup>
   <ItemGroup>

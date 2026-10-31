@@ -8,7 +8,11 @@ RetroShite is an offline Android app for cataloguing physical games, movies and 
 
 | Collection | Settings | Duplicate check | Item editor |
 |:--:|:--:|:--:|:--:|
-| <img src="screenshots/collection.jpg" width="200" alt="Collection screen"> | <img src="screenshots/settings.jpg" width="200" alt="Settings menu"> | <img src="screenshots/already-owned.jpg" width="200" alt="Already owned dialog"> | <img src="screenshots/edit-item.jpg" width="200" alt="Item editor"> |
+| <img src="screenshots/collection.jpg" width="200" alt="Collection screen"> | <img src="screenshots/settings-v013.jpg" width="200" alt="Settings menu"> | <img src="screenshots/already-owned.jpg" width="200" alt="Already owned dialog"> | <img src="screenshots/edit-item.jpg" width="200" alt="Item editor"> |
+
+| Remove systems | Confirm removal | Add system |
+|:--:|:--:|:--:|
+| <img src="screenshots/remove-systems.jpg" width="200" alt="Select systems to remove"> | <img src="screenshots/remove-confirmation.jpg" width="200" alt="Confirm removal"> | <img src="screenshots/add-system.jpg" width="200" alt="Add custom system"> |
 
 ## Features
 
@@ -16,6 +20,9 @@ RetroShite is an offline Android app for cataloguing physical games, movies and 
 - Manual item entry for loose cartridges and items without barcodes
 - Camera capture for cover art
 - System/category filters and custom categories
+- Remember the last system used when adding another item during the same app session
+- Remove multiple unused systems from Settings; systems containing items are protected
+- Removed default systems stay removed after restarting
 - Item title, condition, system and barcode fields
 - Local SQLite storage, without accounts or a cloud service
 - Manual collection backup and restore as a ZIP containing the database and cover images

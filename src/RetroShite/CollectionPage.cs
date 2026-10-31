@@ -7,6 +7,7 @@ public sealed class CollectionPage : ContentPage
 {
     private CollectionStore _store = new();
     private string _selectedSystem = "All";
+    private string? _lastNewItemSystem;
     private readonly HorizontalStackLayout _tabs = new() { Spacing = 8, Padding = new Thickness(12, 8) };
     private readonly VerticalStackLayout _rows = new() { Spacing = 12, Padding = 12 };
     private readonly Label _count = new() { TextColor = Color.FromArgb("#98A9B9"), FontSize = 12 };
@@ -101,8 +102,14 @@ public sealed class CollectionPage : ContentPage
 
     private async Task OpenEditorAsync(CollectionItem item)
     {
-        var editor = new ItemPage(_store, item);
-        editor.Changed += () => { RebuildTabs(); Refresh(); };
+        var isNew = item.Id == 0;
+        var preferred = _lastNewItemSystem ?? (_selectedSystem == "All" ? null : _selectedSystem);
+        var editor = new ItemPage(_store, item, isNew ? preferred : null);
+        editor.Changed += () =>
+        {
+            if (isNew) _lastNewItemSystem = editor.SelectedSystem;
+            RebuildTabs(); Refresh();
+        };
         await Navigation.PushAsync(editor);
     }
 
@@ -171,8 +178,21 @@ public sealed class CollectionPage : ContentPage
     private async Task ShowSettingsAsync()
     {
         var action = await DisplayActionSheet("RetroShite settings", "Cancel", null,
-            "Add system", "Backup / Restore");
+            "Add system", "Remove systems", "Backup / Restore");
         if (action == "Backup / Restore") await ShowBackupsAsync();
+        else if (action == "Remove systems")
+        {
+            var page = new RemoveSystemsPage(_store);
+            page.Changed += () =>
+            {
+                if (!_store.Systems().Contains(_selectedSystem, StringComparer.OrdinalIgnoreCase))
+                    _selectedSystem = "All";
+                if (_lastNewItemSystem is not null && !_store.Systems().Contains(_lastNewItemSystem, StringComparer.OrdinalIgnoreCase))
+                    _lastNewItemSystem = null;
+                RebuildTabs(); Refresh();
+            };
+            await Navigation.PushAsync(page);
+        }
         else if (action == "Add system")
         {
             var name = await DisplayPromptAsync("Add system", "System name", "ADD", "CANCEL",
