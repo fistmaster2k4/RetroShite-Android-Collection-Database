@@ -30,10 +30,26 @@ public static class BackupService
                     Update(progress, "Adding covers", i + 1, covers.Length);
                 }
             });
+#if RETROSHITE_LEGACY
+            Update(progress, "Choose where to save ZIP", covers.Length, covers.Length);
+#else
             Update(progress, "Saving ZIP to Downloads", covers.Length, covers.Length);
+#endif
 #if ANDROID
             var resolver = Android.App.Application.Context.ContentResolver
                 ?? throw new InvalidOperationException("Android content resolver unavailable.");
+#if RETROSHITE_LEGACY
+            // SAF is available on Android 8 and does not require storage permission.
+            // Let the user choose a destination; modern builds retain Downloads/RetroShite.
+            var uri = await MainThread.InvokeOnMainThreadAsync(() =>
+                MainActivity.ChooseExportDestinationAsync(Path.GetFileName(path)));
+            if (uri is null) throw new OperationCanceledException("Export cancelled.");
+            await using (var output = resolver.OpenOutputStream(uri)
+                ?? throw new IOException("Unable to open selected export destination."))
+            await using (var input = File.OpenRead(path))
+                await input.CopyToAsync(output);
+            return "Saved to selected document location";
+#else
             using var values = new Android.Content.ContentValues();
             values.Put(Android.Provider.MediaStore.IMediaColumns.DisplayName, Path.GetFileName(path));
             values.Put(Android.Provider.MediaStore.IMediaColumns.MimeType, "application/zip");
@@ -54,6 +70,7 @@ public static class BackupService
                 throw;
             }
             return "Downloads/RetroShite/" + Path.GetFileName(path);
+#endif
 #else
             return path;
 #endif

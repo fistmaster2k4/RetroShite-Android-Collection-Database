@@ -37,27 +37,34 @@ See [Technical Specifications](SPECIFICATIONS.md) for supported barcode types, s
 - Merge ZIP backups from another device, adding missing titles and categories without overwriting the local collection
 - Optional full replacement restore for moving to a new device
 
-## Requirements
+## Requirements and editions
 
-- Android 11 (API 30) or later
-- ARM64 APK for ARM64 devices
+Both APKs are built from **the same source**, selected by the `RetroShiteEdition` build property. No separate source branch is required.
+
+| Edition | Minimum Android | Package ID | Backup export |
+| --- | --- | --- | --- |
+| Standard (default) | Android 11 (API 30) | `com.blueprint.retroshite` | `Downloads/RetroShite` using MediaStore |
+| Legacy | Android 8 (API 26) | `com.blueprint.retroshite.legacy` | Android system **Save As** picker (Storage Access Framework) |
+
+The separate package IDs allow both editions to coexist on a supported device. A Legacy installation will not overwrite a Standard installation. Both editions read and write compatible ZIP backups. Hardware architecture must match the APK runtime identifier (e.g. `android-arm64` or `android-arm`).
 
 ## Build from source
 
 Open `src/RetroShite/RetroShite.csproj` in Visual Studio 2022 with the .NET MAUI Android workload installed, or use the .NET 8 SDK with the Android workload.
 
-From `src/RetroShite`:
+From `src/RetroShite`, select the desired edition at build time:
 
 ```powershell
 dotnet restore
-dotnet publish RetroShite.csproj -f net8.0-android -c Debug -r android-arm64 -p:AndroidPackageFormat=apk
+dotnet publish RetroShite.csproj -f net8.0-android -c Release -r android-arm64 -p:AndroidPackageFormat=apk -p:RetroShiteEdition=Standard
+dotnet publish RetroShite.csproj -f net8.0-android -c Release -r android-arm -p:AndroidPackageFormat=apk -p:RetroShiteEdition=Legacy
 ```
 
-For distribution, build and sign an Android APK using your own signing configuration. Keep the signing key private and use the same signing identity for updates.
+The `android-arm` example targets older 32-bit tablets; use `android-arm64` instead if the tablet is 64-bit. Publish **one edition at a time**, or use separate output/intermediate directories to avoid mixing build products. For distribution, sign using your own signing configuration and retain the same signing identity for updates. Name the resulting signed files `RetroShite_v0.1.5-signed.apk` and `RetroShite_Legacy_v0.1.5-signed.apk` respectively.
 
 ## Data
 
-Collection records and custom categories are stored in an app-private SQLite database; cover images are saved locally. Use **Settings → Backup / Restore** to export a ZIP to Downloads, merge an existing ZIP into the current collection, or replace the collection entirely. Merging skips matching barcodes; for items without barcodes it compares system, title and condition. Different barcodes are kept as separate editions, even when the title is the same. Older backups remain compatible. **Settings → Optimise cover images** reduces the size of photographs already stored on the device; back up before optimising.
+Collection records and custom categories are stored in an app-private SQLite database; cover images are saved locally. Use **Settings → Backup / Restore** to export a ZIP (Standard: `Downloads/RetroShite`; Legacy: a location chosen in the Save As picker), merge an existing ZIP into the current collection, or replace the collection entirely. Merging skips matching barcodes; for items without barcodes it compares system, title and condition. Different barcodes are kept as separate editions, even when the title is the same. Older backups remain compatible. **Settings → Optimise cover images** reduces the size of photographs already stored on the device; back up before optimising.
 
 ## Licence
 

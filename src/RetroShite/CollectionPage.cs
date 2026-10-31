@@ -143,8 +143,8 @@ public sealed class CollectionPage : ContentPage
     {
         if (_busy) return;
         var action = await DisplayActionSheet("Collection backup", "Cancel", null,
-            "Export to Downloads", "Merge ZIP into collection", "Replace collection from ZIP");
-        if (action == "Export to Downloads")
+            "Export collection ZIP", "Merge ZIP into collection", "Replace collection from ZIP");
+        if (action == "Export collection ZIP")
         {
             var progress = await BeginProgressAsync("Exporting collection");
             try
@@ -153,6 +153,11 @@ public sealed class CollectionPage : ContentPage
                 _store = new CollectionStore();
                 await EndProgressAsync(progress);
                 await DisplayAlert("Backup saved", location, "OK");
+            }
+            catch (OperationCanceledException)
+            {
+                _store = new CollectionStore();
+                await EndProgressAsync(progress);
             }
             catch (Exception ex)
             {

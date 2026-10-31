@@ -9,10 +9,24 @@
     <Nullable>enable</Nullable>
     <ApplicationTitle>RetroShite</ApplicationTitle>
     <ApplicationId>com.blueprint.retroshite</ApplicationId>
-        <ApplicationDisplayVersion>0.1.4</ApplicationDisplayVersion>
-        <ApplicationVersion>5</ApplicationVersion>
+    <ApplicationDisplayVersion>0.1.5</ApplicationDisplayVersion>
+    <ApplicationVersion>6</ApplicationVersion>
     <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
   </PropertyGroup>
+  <!-- One source tree, two independent installable applications. Standard is the default. -->
+  <PropertyGroup>
+    <RetroShiteEdition Condition="'$(RetroShiteEdition)' == ''">Standard</RetroShiteEdition>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RetroShiteEdition)' == 'Legacy'">
+    <ApplicationId>com.blueprint.retroshite.legacy</ApplicationId>
+    <ApplicationTitle>RetroShite Legacy</ApplicationTitle>
+    <SupportedOSPlatformVersion>26.0</SupportedOSPlatformVersion>
+    <DefineConstants>$(DefineConstants);RETROSHITE_LEGACY</DefineConstants>
+  </PropertyGroup>
+  <Target Name="ValidateRetroShiteEdition" BeforeTargets="BeforeBuild"
+          Condition="'$(RetroShiteEdition)' != 'Standard' and '$(RetroShiteEdition)' != 'Legacy'">
+    <Error Text="RetroShiteEdition must be Standard or Legacy." />
+  </Target>
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.100" />
     <PackageReference Include="ZXing.Net.Maui.Controls" Version="0.4.0" />

@@ -1,6 +1,6 @@
 # RetroShite — Technical Specifications
 
-This document describes the **v0.1.4** Android build. It distinguishes the barcode
+This document describes the **v0.1.5** Android builds. It distinguishes the barcode
 types enabled in code from those individually tested on physical products.
 
 ## Barcode scanning
@@ -54,20 +54,22 @@ normalisation or validation layer beyond the decoder.
 
 ## Collection and backup
 
-| Area | v0.1.4 behaviour |
+| Area | v0.1.5 behaviour |
 | --- | --- |
-| Platform | Android 11 / API 30 or later |
+| Platform | Standard: Android 11 / API 30+; Legacy: Android 8 / API 26+ |
 | Framework | .NET 8 MAUI, Android |
 | Data storage | App-private SQLite database |
 | Cover storage | Local JPEG files |
 | New cover photographs | Maximum 1200 pixels on the longest side, JPEG quality 80% |
 | Existing cover photographs | Optional **Settings → Optimise cover images** with progress and storage-savings summary |
 | Backup format | ZIP containing `retroshite.db` and `covers/*.jpg` |
-| Backup destination | `Downloads/RetroShite` |
+| Backup destination | Standard: `Downloads/RetroShite`; Legacy: user-selected via Android Save As picker |
 | Export | Progress while packaging photographs, followed by final ZIP saving |
 | Import — Merge | Adds missing systems and items without replacing existing records |
 | Import — Replace | Replaces the current collection from a backup ZIP |
 | Accounts/cloud | None required; storage and barcode lookup are offline |
+
+Both editions use the same database and backup format but have distinct Android package IDs, allowing independent installation. The edition is selected using the `RetroShiteEdition=Standard` or `RetroShiteEdition=Legacy` MSBuild property. The Legacy APK uses the Android Storage Access Framework to save archives on Android 8 without modifying the Standard APK's MediaStore export behaviour.
 
 ### Duplicate handling
 
