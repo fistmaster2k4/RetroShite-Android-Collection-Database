@@ -62,11 +62,16 @@ public sealed class ItemPage : ContentPage
             }
             var photo = await MediaPicker.Default.CapturePhotoAsync();
             if (photo is null) return;
-            _newCover = Guid.NewGuid().ToString("N") + ".jpg";
-            var destination = Path.Combine(CollectionStore.Covers, _newCover);
+            var filename = Guid.NewGuid().ToString("N") + ".jpg";
+            var destination = Path.Combine(CollectionStore.Covers, filename);
             await using var input = await photo.OpenReadAsync();
-            await using var output = File.Create(destination);
-            await input.CopyToAsync(output);
+            await CoverService.SaveCapturedAsync(input, destination);
+            if (_newCover.Length > 0)
+            {
+                var priorDraft = Path.Combine(CollectionStore.Covers, _newCover);
+                if (File.Exists(priorDraft)) File.Delete(priorDraft);
+            }
+            _newCover = filename;
             _cover.Source = ImageSource.FromFile(destination);
         }
         catch (Exception ex) { await DisplayAlert("Photo error", ex.Message, "OK"); }

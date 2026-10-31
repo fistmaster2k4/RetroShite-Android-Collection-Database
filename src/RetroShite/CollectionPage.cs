@@ -11,6 +11,7 @@ public sealed class CollectionPage : ContentPage
     private readonly HorizontalStackLayout _tabs = new() { Spacing = 8, Padding = new Thickness(12, 8) };
     private readonly VerticalStackLayout _rows = new() { Spacing = 12, Padding = 12 };
     private readonly Label _count = new() { TextColor = Color.FromArgb("#98A9B9"), FontSize = 12 };
+    private bool _busy;
 
     public CollectionPage()
     {
@@ -140,46 +141,114 @@ public sealed class CollectionPage : ContentPage
 
     private async Task ShowBackupsAsync()
     {
-        var action = await DisplayActionSheet("Collection backup", "Cancel", null, "Export to Downloads", "Import ZIP backup");
+        if (_busy) return;
+        var action = await DisplayActionSheet("Collection backup", "Cancel", null,
+            "Export to Downloads", "Merge ZIP into collection", "Replace collection from ZIP");
         if (action == "Export to Downloads")
         {
+            var progress = await BeginProgressAsync("Exporting collection");
             try
             {
-                var location = await BackupService.ExportAsync(_store);
+                var location = await BackupService.ExportAsync(_store, progress.Reporter);
                 _store = new CollectionStore();
+                await EndProgressAsync(progress);
                 await DisplayAlert("Backup saved", location, "OK");
             }
             catch (Exception ex)
             {
                 _store = new CollectionStore();
-                await DisplayAlert("Export failed", ex.Message, "OK");
+                await EndProgressAsync(progress);
+                await DisplayAlert("Export FAILED", ex.Message, "OK");
             }
         }
-        else if (action == "Import ZIP backup")
+        else if (action is "Merge ZIP into collection" or "Replace collection from ZIP")
         {
             var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Select RetroShite ZIP backup" });
             if (file is null) return;
-            if (!await DisplayAlert("Replace collection?", "Importing replaces the current collection. Export a backup first.", "IMPORT", "CANCEL")) return;
+            var merge = action == "Merge ZIP into collection";
+            if (!await DisplayAlert(merge ? "Merge collection?" : "Replace collection?",
+                merge ? "New titles and systems will be added. Existing titles will remain unchanged." :
+                "This replaces your collection. Export a backup first.", "IMPORT", "CANCEL")) return;
+            var progress = await BeginProgressAsync(merge ? "Merging collection" : "Restoring collection");
             try
             {
-                await BackupService.ImportAsync(file, _store);
+                var result = await BackupService.ImportAsync(file, _store, merge, progress.Reporter);
                 _store = new CollectionStore();
                 RebuildTabs(); Refresh();
-                await DisplayAlert("Restored", "Collection imported.", "OK");
+                await EndProgressAsync(progress);
+                await DisplayAlert(merge ? "Merge complete" : "Restored",
+                    merge ? $"Added: {result.Added}\nAlready present: {result.Skipped}\nNew systems: {result.SystemsAdded}" :
+                    "Collection replaced from backup.", "OK");
             }
             catch (Exception ex)
             {
                 _store = new CollectionStore();
-                await DisplayAlert("Import failed", ex.Message, "OK");
+                await EndProgressAsync(progress);
+                await DisplayAlert("Import FAILED", ex.Message, "OK");
             }
+        }
+    }
+
+    private async Task<ProgressPage> BeginProgressAsync(string title)
+    {
+        _busy = true;
+        var progress = new ProgressPage(title);
+        await Navigation.PushModalAsync(progress);
+        return progress;
+    }
+
+    private async Task EndProgressAsync(ProgressPage progress)
+    {
+        if (Navigation.ModalStack.LastOrDefault() == progress)
+            await Navigation.PopModalAsync();
+        _busy = false;
+    }
+
+    private async Task OptimiseCoversAsync()
+    {
+        if (_busy) return;
+        var covers = Directory.GetFiles(CollectionStore.Covers, "*.jpg");
+        if (!await DisplayAlert("Optimise existing covers?",
+            $"Resize large photographs to {CoverService.MaximumDimension}px (JPEG {CoverService.JpegQuality}% quality). " +
+            $"Your {covers.Length} original cover images will be replaced after successful conversion. Export a backup first.",
+            "OPTIMISE", "CANCEL")) return;
+        var progress = await BeginProgressAsync("Optimising covers");
+        try
+        {
+            var changed = 0;
+            long before = 0, after = 0;
+            await Task.Run(() =>
+            {
+                for (var i = 0; i < covers.Length; i++)
+                {
+                    var result = CoverService.OptimiseExisting(covers[i]);
+                    if (result.Changed) changed++;
+                    before += result.Before;
+                    after += result.After;
+                    progress.Reporter.Report(new WorkProgress("Resizing photographs", i + 1, covers.Length));
+                }
+            });
+            await EndProgressAsync(progress);
+            Refresh();
+            await DisplayAlert("Optimisation complete",
+                $"Images processed: {covers.Length}\nImages reduced: {changed}\n" +
+                $"Before: {before / 1048576.0:F1} MB\nAfter: {after / 1048576.0:F1} MB\n" +
+                $"Saved: {(before - after) / 1048576.0:F1} MB", "OK");
+        }
+        catch (Exception ex)
+        {
+            await EndProgressAsync(progress);
+            Refresh();
+            await DisplayAlert("Optimisation FAILED", ex.Message + "\nCompleted images remain safe.", "OK");
         }
     }
 
     private async Task ShowSettingsAsync()
     {
         var action = await DisplayActionSheet("RetroShite settings", "Cancel", null,
-            "Add system", "Remove systems", "Backup / Restore");
+            "Add system", "Remove systems", "Backup / Restore", "Optimise cover images");
         if (action == "Backup / Restore") await ShowBackupsAsync();
+        else if (action == "Optimise cover images") await OptimiseCoversAsync();
         else if (action == "Remove systems")
         {
             var page = new RemoveSystemsPage(_store);

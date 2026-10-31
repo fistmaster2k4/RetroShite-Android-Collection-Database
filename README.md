@@ -14,18 +14,26 @@ RetroShite is an offline Android app for cataloguing physical games, movies and 
 |:--:|:--:|:--:|
 | <img src="screenshots/remove-systems.jpg" width="200" alt="Select systems to remove"> | <img src="screenshots/remove-confirmation.jpg" width="200" alt="Confirm removal"> | <img src="screenshots/add-system.jpg" width="200" alt="Add custom system"> |
 
+| Optimising covers | Optimisation results |
+|:--:|:--:|
+| <img src="screenshots/optimising-covers.jpg" width="200" alt="Live cover optimisation progress"> | <img src="screenshots/optimisation-complete.jpg" width="200" alt="Cover optimisation space savings"> |
+
 ## Features
 
 - Barcode scanning with local duplicate detection
 - Manual item entry for loose cartridges and items without barcodes
 - Camera capture for cover art
+- Automatically resize new cover photographs to 1200 pixels maximum, JPEG quality 80%
+- Optimise stored cover images from Settings, with live progress and space-saved summary
 - System/category filters and custom categories
 - Remember the last system used when adding another item during the same app session
 - Remove multiple unused systems from Settings; systems containing items are protected
 - Removed default systems stay removed after restarting
 - Item title, condition, system and barcode fields
 - Local SQLite storage, without accounts or a cloud service
-- Manual collection backup and restore as a ZIP containing the database and cover images
+- ZIP export with live progress and a completion message
+- Merge ZIP backups from another device, adding missing titles and categories without overwriting the local collection
+- Optional full replacement restore for moving to a new device
 
 ## Requirements
 
@@ -47,7 +55,7 @@ For distribution, build and sign an Android APK using your own signing configura
 
 ## Data
 
-Collection records and custom categories are stored in an app-private SQLite database; cover images are saved locally. Use **Settings → Backup / Restore** to export a ZIP to Downloads or restore from a ZIP. Restoring replaces the current collection.
+Collection records and custom categories are stored in an app-private SQLite database; cover images are saved locally. Use **Settings → Backup / Restore** to export a ZIP to Downloads, merge an existing ZIP into the current collection, or replace the collection entirely. Merging skips matching barcodes; for items without barcodes it compares system, title and condition. Different barcodes are kept as separate editions, even when the title is the same. Older backups remain compatible. **Settings → Optimise cover images** reduces the size of photographs already stored on the device; back up before optimising.
 
 ## Licence
 
