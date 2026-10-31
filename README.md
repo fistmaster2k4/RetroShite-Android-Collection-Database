@@ -4,6 +4,8 @@
 
 RetroShite is an offline Android app for cataloguing physical games, movies and other media. Scan a barcode to check whether an item is already in your collection, or add it manually.
 
+See [Technical Specifications](SPECIFICATIONS.md) for supported barcode types, scanner behaviour, and backup/import details.
+
 ## Screenshots
 
 | Collection | Settings | Duplicate check | Item editor |
