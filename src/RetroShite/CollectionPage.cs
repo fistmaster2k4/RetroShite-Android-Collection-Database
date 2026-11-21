@@ -9,7 +9,7 @@ public sealed class CollectionPage : ContentPage
     private string _selectedSystem = "All";
     private string? _lastNewItemSystem;
     private readonly HorizontalStackLayout _tabs = new() { Spacing = 8, Padding = new Thickness(12, 8) };
-    private readonly VerticalStackLayout _rows = new() { Spacing = 12, Padding = 12 };
+    private readonly CollectionView _collection;
     private readonly Label _count = new() { TextColor = Color.FromArgb("#98A9B9"), FontSize = 12 };
     private bool _busy;
 
@@ -32,14 +32,37 @@ public sealed class CollectionPage : ContentPage
         head.Add(new Label { Text = "YOUR COLLECTION", TextColor = Ui.Gold, FontSize = 15,
             FontAttributes = FontAttributes.Bold }, 0);
         head.Add(_count, 1);
-        var body = new VerticalStackLayout { Children = { head, _rows } };
+        // Virtualise rows rather than mounting an Image and card for every item.
+        // Each row contains at most two cards, preserving the existing design.
+        _collection = new CollectionView
+        {
+            SelectionMode = SelectionMode.None,
+            ItemsLayout = new LinearItemsLayout(ItemsLayoutOrientation.Vertical) { ItemSpacing = 12 },
+            Margin = new Thickness(12, 0, 12, 12),
+            ItemTemplate = new DataTemplate(() =>
+            {
+                var host = new ContentView();
+                host.BindingContextChanged += (_, _) =>
+                {
+                    host.Content = host.BindingContext is CollectionRow row ? MakeRow(row) : null;
+                };
+                return host;
+            })
+        };
         var main = new Grid
         {
-            RowDefinitions = { new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star), new RowDefinition(GridLength.Auto) }
+            RowDefinitions =
+            {
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Star),
+                new RowDefinition(GridLength.Auto)
+            }
         };
         main.Add(tabs, 0, 0);
-        main.Add(new ScrollView { Content = body }, 0, 1);
-        main.Add(actions, 0, 2);
+        main.Add(head, 0, 1);
+        main.Add(_collection, 0, 2);
+        main.Add(actions, 0, 3);
         Content = main;
         ToolbarItems.Add(new ToolbarItem("⚙", null, async () => await ShowSettingsAsync()));
         RebuildTabs(); Refresh();
@@ -61,25 +84,86 @@ public sealed class CollectionPage : ContentPage
         }
     }
 
+    // All retains the configured system/tab order, with titles A-Z within each system.
+    // Individual filters retain the existing unheaded two-column appearance.
     private void Refresh()
     {
-        var items = _store.All().Where(x => _selectedSystem == "All" || x.System == _selectedSystem).ToList();
-        _count.Text = $"{items.Count} ITEMS";
-        _rows.Children.Clear();
-        if (items.Count == 0)
+        var items = _store.All();
+        var rows = new List<CollectionRow>();
+        if (_selectedSystem == "All")
         {
-            _rows.Children.Add(new Label { Text = "Nothing here yet. Scan or add your first item.",
-                TextColor = Colors.White, Margin = 18, HorizontalTextAlignment = TextAlignment.Center });
-            return;
+            _count.Text = $"{items.Count} ITEMS";
+            var bySystem = items.GroupBy(x => x.System, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x => x.Key, x => x.ToList(), StringComparer.OrdinalIgnoreCase);
+            foreach (var system in _store.Systems())
+            {
+                if (!bySystem.TryGetValue(system, out var systemItems) || systemItems.Count == 0)
+                    continue;
+                rows.Add(new CollectionRow(system));
+                AddCardRows(rows, systemItems);
+            }
         }
-        for (int i = 0; i < items.Count; i += 2)
+        else
         {
-            var grid = new Grid { ColumnSpacing = 12,
-                ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star) } };
-            grid.Add(MakeCard(items[i]), 0);
-            if (i + 1 < items.Count) grid.Add(MakeCard(items[i + 1]), 1);
-            _rows.Children.Add(grid);
+            var filtered = items.Where(x => string.Equals(x.System, _selectedSystem,
+                StringComparison.OrdinalIgnoreCase)).ToList();
+            _count.Text = $"{filtered.Count} ITEMS";
+            AddCardRows(rows, filtered);
         }
+        if (rows.Count == 0)
+            rows.Add(new CollectionRow("Nothing here yet. Scan or add your first item.", true));
+        _collection.ItemsSource = rows;
+    }
+
+    private static void AddCardRows(List<CollectionRow> rows, List<CollectionItem> items)
+    {
+        for (var i = 0; i < items.Count; i += 2)
+            rows.Add(new CollectionRow(items[i], i + 1 < items.Count ? items[i + 1] : null));
+    }
+
+    private sealed class CollectionRow
+    {
+        public string? Heading { get; }
+        public bool IsEmpty { get; }
+        public CollectionItem? Left { get; }
+        public CollectionItem? Right { get; }
+        public CollectionRow(string heading, bool isEmpty = false)
+        {
+            Heading = heading;
+            IsEmpty = isEmpty;
+        }
+        public CollectionRow(CollectionItem left, CollectionItem? right)
+        {
+            Left = left;
+            Right = right;
+        }
+    }
+
+    private View MakeRow(CollectionRow row)
+    {
+        if (row.Heading is not null)
+            return new Label
+            {
+                Text = row.IsEmpty ? row.Heading : row.Heading.ToUpperInvariant(),
+                TextColor = row.IsEmpty ? Colors.White : Ui.Gold,
+                FontSize = row.IsEmpty ? 13 : 14,
+                FontAttributes = row.IsEmpty ? FontAttributes.None : FontAttributes.Bold,
+                Margin = row.IsEmpty ? new Thickness(6, 18) : new Thickness(3, 14, 3, 2),
+                HorizontalTextAlignment = row.IsEmpty ? TextAlignment.Center : TextAlignment.Start
+            };
+
+        var grid = new Grid
+        {
+            ColumnSpacing = 12,
+            ColumnDefinitions =
+            {
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Star)
+            }
+        };
+        if (row.Left is not null) grid.Add(MakeCard(row.Left), 0);
+        if (row.Right is not null) grid.Add(MakeCard(row.Right), 1);
+        return grid;
     }
 
     private View MakeCard(CollectionItem item)

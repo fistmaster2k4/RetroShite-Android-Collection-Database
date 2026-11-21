@@ -20,6 +20,13 @@ See [Technical Specifications](SPECIFICATIONS.md) for supported barcode types, s
 |:--:|:--:|
 | <img src="screenshots/optimising-covers.jpg" width="200" alt="Live cover optimisation progress"> | <img src="screenshots/optimisation-complete.jpg" width="200" alt="Cover optimisation space savings"> |
 
+## What’s new in 0.1.6
+
+- The **All** catalogue groups games by system in the existing tab order, with titles A–Z within each system.
+- A virtualised two-column collection reduces unnecessary cover/card rendering while scrolling.
+- Individual system filters retain their existing two-column appearance.
+- No database or backup format changes.
+
 ## Features
 
 - Barcode scanning with local duplicate detection
@@ -60,7 +67,7 @@ dotnet publish RetroShite.csproj -f net8.0-android -c Release -r android-arm64 -
 dotnet publish RetroShite.csproj -f net8.0-android -c Release -r android-arm -p:AndroidPackageFormat=apk -p:RetroShiteEdition=Legacy
 ```
 
-The `android-arm` example targets older 32-bit tablets; use `android-arm64` instead if the tablet is 64-bit. Publish **one edition at a time**, or use separate output/intermediate directories to avoid mixing build products. For distribution, sign using your own signing configuration and retain the same signing identity for updates. Name the resulting signed files `RetroShite_v0.1.5-signed.apk` and `RetroShite_Legacy_v0.1.5-signed.apk` respectively.
+The `android-arm` example targets older 32-bit tablets; use `android-arm64` instead if the tablet is 64-bit. Publish **one edition at a time**, or use separate output/intermediate directories to avoid mixing build products. For distribution, sign using your own signing configuration and retain the same signing identity for updates. Name the resulting signed files `RetroShite_v0.1.6-signed.apk` and `RetroShite_Legacy_v0.1.6-signed.apk` respectively.
 
 ## Data
 
